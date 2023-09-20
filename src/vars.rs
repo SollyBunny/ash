@@ -4,19 +4,27 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Error;
 
-pub enum Type {
-	Unknown,
-	Value,
-	Func
-}
+use super::shell;
+use super::args;
 
-
-type Func = fn(&Vars) -> Result<&str, Error>;
+type Func = fn(&mut shell::Shell, args: &args::Args) -> Result<String, Error>;
 type Value = String;
+type Namespace = Vars;
 
 pub enum Var {
 	Value(Value),
-	Func(Func)
+	Func(Func),
+	Namespace(Vars)
+}
+
+impl Var {
+	pub fn copy(&self) -> Var {
+		match self {
+			Var::Value(v) => Var::Value(v.copy()),
+			Var::Func(f) => Var::Func(f.copy()),
+			Var::Namespace(n) => Var::Namespace(_n),
+		}
+	}
 }
 
 pub struct Vars {
@@ -27,6 +35,11 @@ impl Vars {
 	pub fn new() -> Vars {
 		Vars {
 			data: HashMap::new()
+		}
+	}
+	pub fn add(&mut self, vars: &Vars) {
+		for (key, value) in &vars.data {
+			self.data.insert(*key, value.copy());
 		}
 	}
 	fn hash(&self, key: &String) -> u64 {

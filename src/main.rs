@@ -2,16 +2,20 @@
 
 mod shell;
 mod vars;
+mod builtins;
+mod args;
 
 use std::io;
 use std::io::Error;
 
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new(io::stdin(), io::stdout())?;
-	let mut out: Result<(), Error>;
+	let mut out: Result<String, Error>;
+	static READLINE: &str = "readline";
 	loop {
-		out = shell.prompt();
+		out = shell.eval(&READLINE.to_string());
 		if out.is_err() { break }
+		shell.eval(&out.unwrap());
 	}
 	shell.close()?;
 	println!("{}", out.unwrap_err());

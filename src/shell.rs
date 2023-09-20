@@ -1,14 +1,15 @@
-use std::io::{Stdin, Stdout, Read, Write, Error};
+use std::io::{Stdin, Stdout, Error};
 use std::os::fd::AsRawFd;
 
 use super::vars;
+use super::builtins;
 
 pub struct Shell {
-	termin: Stdin,
-	termout: Stdout,
-	termcur: termios::Termios,
-	termold: termios::Termios,
-	vars: vars::Vars
+	pub termin: Stdin,
+	pub termout: Stdout,
+	pub termcur: termios::Termios,
+	pub termold: termios::Termios,
+	pub vars: vars::Vars
 }
 
 impl Shell {
@@ -22,24 +23,26 @@ impl Shell {
 			termcur.c_cc[termios::VMIN] = 1;
 			termcur.c_cc[termios::VTIME] = 0;
 			termios::tcsetattr(fdin, termios::TCSANOW, &termcur)?;
-		// Setup env
-			let mut vars = vars::Vars::new();
+		// Setup shell
+			let vars = vars::Vars::new();
+			let mut shell = Shell {
+				termin,
+				termout,
+				termcur,
+				termold,
+				vars
+			};
 			// vars.set(&"builtins".to_string(), vars::Var0 as String,
 			// 	f: None
 			// });
-			vars.set(&"home".to_string(), vars::Var::Value(
+			shell.vars.set(&"home".to_string(), vars::Var::Value(
 				std::env::var("HOME").unwrap()
 			));
-			vars.set(&"prompt".to_string(), vars::Var::Value(
+			shell.vars.set(&"prompt".to_string(), vars::Var::Value(
 				"$ ".to_string()
 			));
-		Ok(Shell {
-			termin,
-			termout,
-			termcur,
-			termold,
-			vars
-		})
+			builtins::add(&mut shell);
+		Ok(shell)
 	}
 	pub fn close(&mut self) -> Result<(), Error> {
 		let fdin = self.termin.as_raw_fd();
@@ -54,40 +57,8 @@ impl Shell {
 		let var = varopt.unwrap();
 		match var {
 			vars::Var::Value(v) => Ok(v.clone()),
-			vars::Var::Func(_f) => Ok("Not Impled Yet".to_string())
+			vars::Var::Func(_f) => Ok("Not Impled Yet".to_string()),
+			vars::Var::Namespace(_n) => Ok("Not Impled Yet".to_string())
 		}
-	}
-	pub fn prompt(&mut self) -> Result<(), Error> {
-		// read byte from self.termin
-		let mut inp: String = "".to_string();
-		let mut cur: usize = 0; 
-		let mut buf: [u8; 1] = [0; 1];
-		loop {
-			self.termin.read(&mut buf)?;
-			println!("{:?}", buf);
-			match buf[0] {
-				b'\r' | b'\n' => break,
-				b'\x03' | b'\x04' => return Err(Error::new(std::io::ErrorKind::Other, "Interrupted")),
-				b'\x7f' => { // backspace
-					if cur == 0 { continue }
-					cur -= 1;
-					inp.remove(cur);
-				},
-				_ => { // default
-					inp.insert(cur, buf[0] as char);
-					cur += 1;
-				}
-			}
-			static PROMPT: &str = "prompt";
-			let prompt: String = self.eval(&(PROMPT.to_string()))?;
-			self.termout.write("\x1b[2K\x1b[1G".as_bytes())?;
-			self.termout.write(prompt.as_bytes())?;
-			self.termout.write(inp.as_bytes())?;
-			self.termout.write("\x1b[".as_bytes())?;
-			self.termout.write((cur + prompt.len() + 1).to_string().as_bytes())?;
-			self.termout.write("G".as_bytes())?;
-			self.termout.flush()?;
-		}
-		Ok(())
 	}
 }
