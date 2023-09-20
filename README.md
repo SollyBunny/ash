@@ -1,2 +1,2 @@
-# ash
-Again Shell, a reimagining of Unix CLI
+# sssh
+Something Something Shell, a reimagining of Unix CLI

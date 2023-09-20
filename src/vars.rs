@@ -2,17 +2,21 @@
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::io::Error;
 
 pub enum Type {
 	Unknown,
 	Value,
-	Func,
-	Prog
+	Func
 }
 
-pub struct Var {
-	pub t: Type,
-	pub v: String
+
+type Func = fn(&Vars) -> Result<&str, Error>;
+type Value = String;
+
+pub enum Var {
+	Value(Value),
+	Func(Func)
 }
 
 pub struct Vars {

@@ -24,14 +24,15 @@ impl Shell {
 			termios::tcsetattr(fdin, termios::TCSANOW, &termcur)?;
 		// Setup env
 			let mut vars = vars::Vars::new();
-			vars.set(&"home".to_string(), vars::Var {
-				t: vars::Type::Value,
-				v: std::env::var("HOME").unwrap()
-			});
-			vars.set(&"prompt".to_string(), vars::Var {
-				t: vars::Type::Value,
-				v: "$ ".to_string()
-			});
+			// vars.set(&"builtins".to_string(), vars::Var0 as String,
+			// 	f: None
+			// });
+			vars.set(&"home".to_string(), vars::Var::Value(
+				std::env::var("HOME").unwrap()
+			));
+			vars.set(&"prompt".to_string(), vars::Var::Value(
+				"$ ".to_string()
+			));
 		Ok(Shell {
 			termin,
 			termout,
@@ -51,11 +52,9 @@ impl Shell {
 			return Err(Error::new(std::io::ErrorKind::NotFound, "Variable not found"));
 		}
 		let var = varopt.unwrap();
-		match var.t {
-			vars::Type::Value => Ok(var.v.clone()),
-			vars::Type::Func => Ok(var.v.clone()),
-			vars::Type::Prog => Ok(var.v.clone()),
-			_ => Err(Error::new(std::io::ErrorKind::Other, "Invalid type"))
+		match var {
+			vars::Var::Value(v) => Ok(v.clone()),
+			vars::Var::Func(_f) => Ok("Not Impled Yet".to_string())
 		}
 	}
 	pub fn prompt(&mut self) -> Result<(), Error> {
@@ -65,9 +64,9 @@ impl Shell {
 		let mut buf: [u8; 1] = [0; 1];
 		loop {
 			self.termin.read(&mut buf)?;
+			println!("{:?}", buf);
 			match buf[0] {
-				b'\n' => break,
-				b'\r' => continue,
+				b'\r' | b'\n' => break,
 				b'\x03' | b'\x04' => return Err(Error::new(std::io::ErrorKind::Other, "Interrupted")),
 				b'\x7f' => { // backspace
 					if cur == 0 { continue }
