@@ -15,7 +15,8 @@ fn run() -> Result<(), Error> {
 	loop {
 		out = shell.eval(&READLINE.to_string());
 		if out.is_err() { break }
-		shell.eval(&out.unwrap());
+		out = shell.eval(&out.unwrap());
+		if out.is_err() { break }
 	}
 	shell.close()?;
 	println!("{}", out.unwrap_err());
@@ -25,7 +26,7 @@ fn run() -> Result<(), Error> {
 fn main() {
 	let out = run();
 	if out.is_err() {
-		eprintln!("{}", out.unwrap_err());
+		eprintln!("{:?}", out);
 		std::process::exit(1);
 	}
 }

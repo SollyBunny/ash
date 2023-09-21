@@ -35,13 +35,13 @@ impl Shell {
 			// vars.set(&"builtins".to_string(), vars::Var0 as String,
 			// 	f: None
 			// });
-			shell.vars.set(&"home".to_string(), vars::Var::Value(
+			shell.vars.set("home", vars::Var::Value(
 				std::env::var("HOME").unwrap()
 			));
-			shell.vars.set(&"prompt".to_string(), vars::Var::Value(
+			shell.vars.set("prompt", vars::Var::Value(
 				"$ ".to_string()
 			));
-			builtins::add(&mut shell);
+			builtins::add(&mut shell)?;
 		Ok(shell)
 	}
 	pub fn close(&mut self) -> Result<(), Error> {
@@ -50,11 +50,8 @@ impl Shell {
 		Ok(())
 	}
 	pub fn eval(&mut self, input: &String) -> Result<String, Error> {
-		let varopt = self.vars.get(input);
-		if varopt.is_none() {
-			return Err(Error::new(std::io::ErrorKind::NotFound, "Variable not found"));
-		}
-		let var = varopt.unwrap();
+		println!("hash for asdasd: {:?}", self.vars.hash(input));
+		let var = &**self.vars.get(input)?;
 		match var {
 			vars::Var::Value(v) => Ok(v.clone()),
 			vars::Var::Func(_f) => Ok("Not Impled Yet".to_string()),

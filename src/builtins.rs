@@ -1,5 +1,6 @@
 
 use std::io::{Read, Write, Error};
+use std::rc::Rc;
 
 use super::vars;
 use super::shell;
@@ -9,7 +10,7 @@ fn fn_set(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Error> 
 	Ok("".to_string())
 }
 
-fn fn_prompt(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Error> {
+fn fn_readline(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Error> {
 	// read byte from shell.termin
 	let mut inp: String = "".to_string();
 	let mut cur: usize = 0; 
@@ -43,20 +44,18 @@ fn fn_prompt(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Erro
 	Ok(inp)
 }
 
-pub fn add(shell: &mut shell::Shell) {
+pub fn add(shell: &mut shell::Shell) -> Result<(), Error> {
 	let mut builtins = vars::Vars::new();
-	
-	builtins.set(&"home".to_string(), vars::Var::Value(
+	builtins.set("home", vars::Var::Value(
 		std::env::var("HOME").unwrap()
 	));
-	builtins.set(&"prompt".to_string(), vars::Var::Value(
+	builtins.set("prompt", vars::Var::Value(
 		"$ ".to_string()
 	));
 	builtins.set(&"readline".to_string(), vars::Var::Func(
-		fn_prompt
+		fn_readline
 	));
-	// builtins.set(&"echo".to_string(), vars::Var::Func(
-	// 	fn_set
-	// ));
-	shell.vars.add(&builtins);
+	let namespace = vars::Var::Namespace(Rc::new(builtins));
+	shell.vars.set("builtins", namespace);
+	shell.vars.importnamespace("builtins")
 }
