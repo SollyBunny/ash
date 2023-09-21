@@ -1,7 +1,6 @@
 
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::string::ToString;
 use std::rc::Rc;
 use std::io::Error;
 use std::clone::Clone;
@@ -42,7 +41,7 @@ impl std::fmt::Debug for Var {
 }
 
 pub struct Vars {
-	data: HashMap<u64, Rc<Var>>
+	data: HashMap<String, Rc<Var>>
 }
 
 impl Vars {
@@ -52,40 +51,30 @@ impl Vars {
 			data: hashmap
 		}
 	}
-	pub fn importnamespace<T: Hash>(&mut self, key: T) -> Result<(), Error> {
+	pub fn importnamespace<T: ToString>(&mut self, key: T) -> Result<(), Error> {
 		// let namespaceopt = self.get(key)?;
-		let namespaceopt = &**self.data.get(&self.hash(key)).unwrap();
+		let namespaceopt = &**self.data.get(&key.to_string()).unwrap();
 		let namespace;
 		match namespaceopt {
 			Var::Value(_) => { return Err(Error::new(std::io::ErrorKind::InvalidInput, "Got Value, expected Namespace")) }
 			Var::Func(_) => { return Err(Error::new(std::io::ErrorKind::InvalidInput, "Got Value, expected Function")) }
 			Var::Namespace(n) => { namespace = n; }
 		}
-		println!("hash for readline: {:?}", self.hash("readline"));
 		for (key, var) in namespace.data.clone() {
 			println!("{:?}: {:?}", key, var);
 			self.data.insert(key, var);
 		}
-		println!("out for readline: {:?}", self.get("readline")?);
 		Ok(())
 	}
-	pub fn hash<T: Hash>(&self, key: T) -> u64 {
-		let mut hasher = DefaultHasher::new();
-		hasher.update();
-		key.hash(&mut hasher);
-		hasher.update(msg);
-		format!("{:x}", hasher.())
-		hasher.finish()
-	}
-	pub fn get<T: Hash>(&self, key: T) -> Result<&Rc<Var>, Error> {
-		let out = self.data.get(&self.hash(key));
+	pub fn get<T: ToString + std::fmt::Debug>(&self, key: T) -> Result<&Rc<Var>, Error> {
+		let out = self.data.get(&key.to_string());
 		if out.is_none() {
-			Err(Error::new(std::io::ErrorKind::NotFound, "Variable not found"))
+			Err(Error::new(std::io::ErrorKind::NotFound, format!("Variable {:?} not found", key)))
 		} else {
 			Ok(out.unwrap())
 		}
 	}
-	pub fn set<T: Hash>(&mut self, key: T, value: Var) {
-		self.data.insert(self.hash(key), Rc::new(value));
+	pub fn set<T: ToString>(&mut self, key: T, value: Var) {
+		self.data.insert(key.to_string(), Rc::new(value));
 	}
 }

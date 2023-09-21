@@ -2,6 +2,7 @@ use std::io::{Stdin, Stdout, Error};
 use std::os::fd::AsRawFd;
 
 use super::vars;
+use super::args;
 use super::builtins;
 
 pub struct Shell {
@@ -32,15 +33,6 @@ impl Shell {
 				termold,
 				vars
 			};
-			// vars.set(&"builtins".to_string(), vars::Var0 as String,
-			// 	f: None
-			// });
-			shell.vars.set("home", vars::Var::Value(
-				std::env::var("HOME").unwrap()
-			));
-			shell.vars.set("prompt", vars::Var::Value(
-				"$ ".to_string()
-			));
 			builtins::add(&mut shell)?;
 		Ok(shell)
 	}
@@ -50,11 +42,12 @@ impl Shell {
 		Ok(())
 	}
 	pub fn eval(&mut self, input: &String) -> Result<String, Error> {
-		println!("hash for asdasd: {:?}", self.vars.hash(input));
 		let var = &**self.vars.get(input)?;
 		match var {
 			vars::Var::Value(v) => Ok(v.clone()),
-			vars::Var::Func(_f) => Ok("Not Impled Yet".to_string()),
+			vars::Var::Func(f) => {
+				Ok(f(self, &args::Args::new())?)
+			},
 			vars::Var::Namespace(_n) => Ok("Not Impled Yet".to_string())
 		}
 	}

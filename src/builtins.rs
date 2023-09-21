@@ -17,7 +17,6 @@ fn fn_readline(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Er
 	let mut buf: [u8; 1] = [0; 1];
 	loop {
 		shell.termin.read(&mut buf)?;
-		println!("{:?}", buf);
 		match buf[0] {
 			b'\r' | b'\n' => break,
 			b'\x03' | b'\x04' => return Err(Error::new(std::io::ErrorKind::Other, "Interrupted")),
@@ -31,16 +30,12 @@ fn fn_readline(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Er
 				cur += 1;
 			}
 		}
-		static PROMPT: &str = "PROMPT";
+		static PROMPT: &str = "prompt";
 		let prompt: String = shell.eval(&PROMPT.to_string())?;
-		shell.termout.write("\x1b[2K\x1b[1G".as_bytes())?;
-		shell.termout.write(prompt.as_bytes())?;
-		shell.termout.write(inp.as_bytes())?;
-		shell.termout.write("\x1b[".as_bytes())?;
-		shell.termout.write((cur + prompt.len() + 1).to_string().as_bytes())?;
-		shell.termout.write("G".as_bytes())?;
+		write!(shell.termout, "\x1b[2K\x1b[1G{}{}\x1b[{}G", prompt, inp, (cur + prompt.len() + 1))?;
 		shell.termout.flush()?;
 	}
+	println!();
 	Ok(inp)
 }
 

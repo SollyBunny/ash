@@ -6,7 +6,7 @@ mod builtins;
 mod args;
 
 use std::io;
-use std::io::Error;
+use std::io::{Write, Error};
 
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new(io::stdin(), io::stdout())?;
@@ -16,7 +16,11 @@ fn run() -> Result<(), Error> {
 		out = shell.eval(&READLINE.to_string());
 		if out.is_err() { break }
 		out = shell.eval(&out.unwrap());
-		if out.is_err() { break }
+		if out.is_err() { 
+			writeln!(shell.termout, "{}", out.unwrap_err())
+		} else {
+			writeln!(shell.termout, "{}", out.unwrap())
+		}?;
 	}
 	shell.close()?;
 	println!("{}", out.unwrap_err());
