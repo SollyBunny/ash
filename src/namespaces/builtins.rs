@@ -1,5 +1,5 @@
 
-use std::io::{Read, Write, Error};
+use std::io::{stdout, stdin, Read, Write, Error};
 use std::rc::Rc;
 
 use super::vars;
@@ -16,10 +16,10 @@ fn fn_readline(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Er
 	let mut cur: usize = 0; 
 	let mut buf: [u8; 1] = [0; 1];
 	loop {
-		shell.termin.read(&mut buf)?;
+		stdin().read(&mut buf)?;
 		match buf[0] {
 			b'\r' | b'\n' => break,
-			b'\x03' | b'\x04' => return Err(Error::new(std::io::ErrorKind::Other, "Interrupted")),
+			b'\x03' | b'\x04' => return Err(Error::new(std::io::ErrorKind::Interrupted, "Interrupted")),
 			b'\x7f' => { // backspace
 				if cur == 0 { continue }
 				cur -= 1;
@@ -30,10 +30,8 @@ fn fn_readline(shell: &mut shell::Shell, args: &args::Args) -> Result<String, Er
 				cur += 1;
 			}
 		}
-		static PROMPT: &str = "prompt";
-		let prompt: String = shell.eval(&PROMPT.to_string())?;
-		write!(shell.termout, "\x1b[2K\x1b[1G{}{}\x1b[{}G", prompt, inp, (cur + prompt.len() + 1))?;
-		shell.termout.flush()?;
+		print!("\x1b[2K\x1b[1G{}{}\x1b[{}G", args.v[1], inp, (cur + args.v[1].len() + 1));
+		stdout().flush()?;
 	}
 	println!();
 	Ok(inp)

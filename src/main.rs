@@ -2,28 +2,31 @@
 
 mod shell;
 mod vars;
-mod builtins;
 mod args;
+mod namespaces;
 
-use std::io;
-use std::io::{Write, Error};
+use std::io::Error;
 
 fn run() -> Result<(), Error> {
-	let mut shell = shell::Shell::new(io::stdin(), io::stdout())?;
+	let mut shell = shell::Shell::new()?;
 	let mut out: Result<String, Error>;
-	static READLINE: &str = "readline";
+	let mut msg: String;
+	let mut err: Error;
+	static READLINE: &str = "readline $prompt";
 	loop {
-		out = shell.eval(&READLINE.to_string());
-		if out.is_err() { break }
-		out = shell.eval(&out.unwrap());
+		msg = shell.eval(&READLINE.to_string())?;
+		out = shell.eval(&msg);
 		if out.is_err() { 
-			writeln!(shell.termout, "{}", out.unwrap_err())
+			err = out.unwrap_err();
+			if err.kind() == std::io::ErrorKind::Interrupted {
+				break
+			}
+			println!("{}: {}", err.kind().to_string(), err.to_string());
 		} else {
-			writeln!(shell.termout, "{}", out.unwrap())
-		}?;
+			
+		};
 	}
 	shell.close()?;
-	println!("{}", out.unwrap_err());
 	Ok(())
 }
 
