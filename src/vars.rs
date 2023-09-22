@@ -18,16 +18,6 @@ pub enum Var {
 	Namespace(Namespace)
 }
 
-impl Var {
-	pub fn copy(&self) -> Var {
-		match self {
-			Var::Value(v) => Var::Value(v.clone()),
-			Var::Func(f) => Var::Func(f.clone()),
-			Var::Namespace(n) => Var::Namespace(n.clone()),
-		}
-	}
-}
-
 impl std::fmt::Debug for Var {
 	fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
 		formatter.write_str(
