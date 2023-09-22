@@ -18,20 +18,19 @@ pub enum Var {
 	Namespace(Namespace)
 }
 
-impl std::fmt::Debug for Var {
+impl std::fmt::Display for Var {
 	fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-		formatter.write_str(
-			match self {
-				Var::Value(v) => v,
-				Var::Func(_) => "function",
-				Var::Namespace(_) => "namespace",
-			}
-		)
+		let string: String = match self {
+			Var::Value(v) => format!("= {}", v),
+			Var::Func(_f) => format!("<function>"),
+			Var::Namespace(_n) => format!("<namespace>"),
+		};
+		formatter.write_str(string.as_str())
 	}
 }
 
 pub struct Vars {
-	data: HashMap<String, Rc<Var>>
+	pub data: HashMap<String, Rc<Var>>
 }
 
 impl Vars {
@@ -51,7 +50,6 @@ impl Vars {
 			Var::Namespace(n) => { namespace = n; }
 		}
 		for (key, var) in namespace.data.clone() {
-			println!("{:?}: {:?}", key, var);
 			self.data.insert(key, var);
 		}
 		Ok(())
