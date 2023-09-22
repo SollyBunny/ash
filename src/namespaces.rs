@@ -8,5 +8,6 @@ use super::args;
 mod builtins;
 
 pub fn add(shell: &mut shell::Shell) -> Result<(), Error> {
-	builtins::add(shell)
+	builtins::add(shell)?;
+	Ok(())
 }

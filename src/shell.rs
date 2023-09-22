@@ -1,4 +1,4 @@
-use std::io::{Error, stdin};
+use std::io::{stdin, Error};
 use std::os::fd::AsRawFd;
 
 use super::vars;
@@ -31,19 +31,17 @@ impl Shell {
 			namespaces::add(&mut shell)?;
 		Ok(shell)
 	}
-	pub fn close(&mut self) -> Result<(), Error> {;
+	pub fn close(&mut self) -> Result<(), Error> {
 		termios::tcsetattr(stdin().as_raw_fd(), termios::TCSANOW, &self.termold)?;
-		println!();
 		Ok(())
 	}
 	pub fn eval(&mut self, input: &String) -> Result<String, Error> {
 		let args = args::Args::new(self, &input)?;
-		println!("{:?}", args);
-		let var = &**self.vars.get(&args.v[0])?;
+		let var = &**self.vars.get(args.get(0))?;
 		match var {
 			vars::Var::Value(v) => Ok(v.clone()),
 			vars::Var::Func(f) => {
-				Ok(f(self, &args)?)
+				f(self, &args)
 			},
 			vars::Var::Namespace(_n) => Ok("Not Impled Yet".to_string())
 		}

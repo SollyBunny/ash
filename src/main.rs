@@ -1,5 +1,4 @@
 
-
 mod shell;
 mod vars;
 mod args;
@@ -10,21 +9,16 @@ use std::io::Error;
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new()?;
 	let mut out: Result<String, Error>;
-	let mut msg: String;
-	let mut err: Error;
-	static READLINE: &str = "readline $prompt";
+	static READLINE: &str = "readline";
 	loop {
-		msg = shell.eval(&READLINE.to_string())?;
-		out = shell.eval(&msg);
+		out = shell.eval(&READLINE.to_string());
+		if out.is_err() { break }
+		out = shell.eval(&out.unwrap());
 		if out.is_err() { 
-			err = out.unwrap_err();
-			if err.kind() == std::io::ErrorKind::Interrupted {
-				break
-			}
-			println!("{}: {}", err.kind().to_string(), err.to_string());
+			println!("{}", out.unwrap_err());
 		} else {
-			
-		};
+			println!("{}", out.unwrap());
+		}
 	}
 	shell.close()?;
 	Ok(())

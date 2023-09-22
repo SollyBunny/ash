@@ -5,36 +5,36 @@ use super::shell;
 
 #[derive(Debug)] 
 pub struct Args {
-	pub v: Vec<String>
+	pub v: Vec<String>,
+	emptystring: String
 }
 
 impl Args {
-	pub fn new(shell: &mut shell::Shell, string: &String) -> Result<Args, Error> {
-		let mut vec: Vec<String> = Vec::new();
-		let mut arg: String = String::new();
+	pub fn new(shell: &mut shell::Shell, input: &String) -> Result<Args, Error> {
+		let mut args: Vec<String> = Vec::new();
 		let mut isescaped: bool = false;
-		let mut isexec: bool = false;
-		for (i, c) in string.chars().enumerate() {
+		let mut iseval: bool = false;
+		let mut arg: String = String::new();
+		for c in input.chars() {
 			if isescaped {
-				match c {
-					'0' => arg.push('\0'),
-					'n' => arg.push('\n'),
-					'r' => arg.push('\r'),
-					't' => arg.push('\t'),
-					'b' => arg.push('\x08'), // backspace
-					'v' => arg.push('\x0b'), // vertical tab
-					'f' => arg.push('\x0c'), // form feed
-					'a' => arg.push('\x07'), // bell
-					'e' => arg.push('\x1b'),
-					// TODO: octal, hex and decimal escapes
-					_ => arg.push(c)
-				}
-				isescaped = false;
+				arg.push(match c {
+					'0' => '\0',
+					't' => '\t',
+					'n' => '\n',
+					'r' => '\r',
+					'e' => '\x1b',
+					'a' => '\x07', // Terminal Bell
+					'b' => '\x08', // Backspace
+					'v' => '\x0b', // Vertical Tab
+					'f' => '\x0c', // New Page
+					// TODO: allow oct, dec, hex and unicode escapes
+					_ => c
+				});
 			} else {
 				match c {
 					' ' => {
 						if arg.len() > 0 {
-							vec.push(if isexec {
+							args.push(if iseval {
 								shell.eval(&arg)?
 							} else {
 								arg
@@ -46,7 +46,7 @@ impl Args {
 						isescaped = true;
 					}
 					'$' => {
-						isexec = true;
+						iseval = true;
 					}
 					_ => {
 						arg.push(c);
@@ -55,15 +55,22 @@ impl Args {
 			}
 		}
 		if arg.len() > 0 {
-			vec.push(if isexec {
+			args.push(if iseval {
 				shell.eval(&arg)?
 			} else {
 				arg
 			});
-			arg = String::new();
 		}
 		Ok(Args {
-			v: vec
+			v: args,
+			emptystring: String::new()
 		})
+	}
+	pub fn get(&self, index: usize) -> &String {
+		if index < self.v.len() {
+			&self.v[index]
+		} else {
+			&self.emptystring
+		}
 	}
 }
