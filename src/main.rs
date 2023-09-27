@@ -2,22 +2,19 @@
 mod shell;
 mod vars;
 mod args;
-mod namespaces;
 
 use std::io::Error;
 
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new()?;
 	let mut out: Result<String, Error>;
-	static READLINE: &str = "readline";
-	loop {
+	static READLINE: &str = "$( $( $(shcall readline) ) )";
+	while shell.is_run {
 		out = shell.eval(&READLINE.to_string());
-		if out.is_err() { break }
-		out = shell.eval(&out.unwrap());
-		if out.is_err() { 
-			println!("{}", out.unwrap_err());
-		} else {
-			println!("{}", out.unwrap());
+		if out.is_err() {
+			eprintln!("{:?}", out);
+		} else if shell.is_echo {
+			println!("{:?}", out);
 		}
 	}
 	shell.close()?;
