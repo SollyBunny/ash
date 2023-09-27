@@ -8,13 +8,18 @@ use std::io::Error;
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new()?;
 	let mut out: Result<String, Error>;
-	static READLINE: &str = "$( $( $(shcall readline) ) )";
+	static READLINE: &str = "$(shcall readline)";
 	while shell.is_run {
-		out = shell.eval(&READLINE.to_string());
+		let readline_var = vars::get("readline");
+		out = if readline_var.is_some() {
+			shell.eval(readline_var.unwrap())
+		} else {
+			shell.eval(READLINE)
+		};
 		if out.is_err() {
 			eprintln!("{:?}", out);
 		} else if shell.is_echo {
-			println!("{:?}", out);
+			println!("{}", out.unwrap());
 		}
 	}
 	shell.close()?;
