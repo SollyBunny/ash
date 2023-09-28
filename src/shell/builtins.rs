@@ -2,7 +2,6 @@
 use std::collections::HashMap;
 use std::io::{stderr, Write, Error};
 use once_cell::sync::Lazy;
-use circular_queue;
 
 use crossterm::{
     cursor,
@@ -10,8 +9,6 @@ use crossterm::{
     terminal::{self, ClearType},
 	event::{read, Event, KeyCode, KeyModifiers}
 };
-
-
 
 use super::{Shell, Args, vars};
 
@@ -21,12 +18,9 @@ static mut BUILTINS: Option<HashMap<&'static str, BuiltinType>> = None;
 
 fn fn_readline(shell: &mut Shell, _args: &Args) -> Result<String, Error> {
 	let mut inp: String = String::new();
-	let mut cur: usize = 0; 
-	let mut history = Lazy::new(|| {
-		shell.history.push(inp.clone());
-		shell.history.iter()
-	});
-	let mut historyused = false;
+	let mut cur: usize = 0;
+	let mut history: usize = 0;
+	let mut historyused: bool = false;
 	terminal::enable_raw_mode()?;
 	let (initial_x, initial_y) = cursor::position()?;
 	loop {
@@ -74,14 +68,27 @@ fn fn_readline(shell: &mut Shell, _args: &Args) -> Result<String, Error> {
 						}
 						KeyCode::Up => {
 							if historyused {
-								match history.next() {
-									Some(s) => inp = s.into(),
-									None => {}
-								}
+								if history <= 0 { continue }
+								history -= 1;
 							} else {
-								historyused = true;
-								
+								if shell.history.len() == 0 { continue }
+								history = shell.history.len() - 1;
+								if inp.len() > 0 {
+									shell.history.push(inp.clone());
+								}
 							}
+							inp = shell.history[history].clone();
+							cur = inp.len();
+						}
+						KeyCode::Down => {
+							if !historyused { continue }
+							history += 1;
+							if history >= shell.history.len() {
+								historyused = false;
+								continue;
+							}
+							inp = shell.history[history].clone();
+							cur = inp.len();
 						}
 						KeyCode::Home => {
 							cur = 0;
@@ -136,6 +143,9 @@ fn fn_readline(shell: &mut Shell, _args: &Args) -> Result<String, Error> {
 			}
 			_ => {}
 		}
+	}
+	if inp.len() > 0 && shell.history.len() > 0 && shell.history[shell.history.len() - 1] != inp {
+		shell.history.push(inp.clone());
 	}
 	terminal::disable_raw_mode()?;
 	write!(stderr(), "\n")?;

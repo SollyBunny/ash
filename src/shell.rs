@@ -1,6 +1,5 @@
 use std::io::{Error, ErrorKind};
 use std::collections::VecDeque;
-use circular_queue::CircularQueue;
 
 use super::vars;
 
@@ -11,7 +10,7 @@ mod builtins;
 pub struct Shell {
 	pub is_run: bool,
 	pub is_echo: bool,
-	pub history: CircularQueue<String>
+	pub history: Vec<String>
 }
 
 impl Shell {
@@ -20,7 +19,7 @@ impl Shell {
 			let shell = Shell {
 				is_run: true,
 				is_echo: true,
-				history: CircularQueue::with_capacity(100)
+				history: Vec::with_capacity(100)
 			};
 		Ok(shell)
 	}
