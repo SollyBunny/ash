@@ -1,6 +1,8 @@
 
 use std::collections::HashMap;
 use std::io::{stderr, Write, Error};
+use once_cell::sync::Lazy;
+use circular_queue;
 
 use crossterm::{
     cursor,
@@ -10,6 +12,7 @@ use crossterm::{
 };
 
 
+
 use super::{Shell, Args, vars};
 
 pub type BuiltinType = fn(shell: &mut Shell, args: &Args) -> Result<String, Error>;
@@ -17,8 +20,13 @@ pub type BuiltinType = fn(shell: &mut Shell, args: &Args) -> Result<String, Erro
 static mut BUILTINS: Option<HashMap<&'static str, BuiltinType>> = None;
 
 fn fn_readline(shell: &mut Shell, _args: &Args) -> Result<String, Error> {
-	let mut inp: String = "".to_string();
+	let mut inp: String = String::new();
 	let mut cur: usize = 0; 
+	let mut history = Lazy::new(|| {
+		shell.history.push(inp.clone());
+		shell.history.iter()
+	});
+	let mut historyused = false;
 	terminal::enable_raw_mode()?;
 	let (initial_x, initial_y) = cursor::position()?;
 	loop {
@@ -65,7 +73,15 @@ fn fn_readline(shell: &mut Shell, _args: &Args) -> Result<String, Error> {
 							cur += 1;
 						}
 						KeyCode::Up => {
-							
+							if historyused {
+								match history.next() {
+									Some(s) => inp = s.into(),
+									None => {}
+								}
+							} else {
+								historyused = true;
+								
+							}
 						}
 						KeyCode::Home => {
 							cur = 0;

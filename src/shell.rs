@@ -1,5 +1,6 @@
 use std::io::{Error, ErrorKind};
 use std::collections::VecDeque;
+use circular_queue::CircularQueue;
 
 use super::vars;
 
@@ -9,7 +10,8 @@ mod builtins;
 
 pub struct Shell {
 	pub is_run: bool,
-	pub is_echo: bool
+	pub is_echo: bool,
+	pub history: CircularQueue<String>
 }
 
 impl Shell {
@@ -17,7 +19,8 @@ impl Shell {
 		// Setup shell
 			let shell = Shell {
 				is_run: true,
-				is_echo: true
+				is_echo: true,
+				history: CircularQueue::with_capacity(100)
 			};
 		Ok(shell)
 	}
@@ -58,8 +61,8 @@ impl Shell {
 				match c {
 					' ' => {
 						if arg.len() > 0 && brackets == 0 {
-							let stripped: &str = arg.trim_matches('$').trim_matches('(').trim_matches(')');
-							let out = self.eval_raw(stripped, depth + 1)?;
+							let out = arg.trim_matches('$').trim_matches('(').trim_matches(')');
+							// let out = self.eval_raw(out, depth + 1)?;
 							args.push_back(self.eval_raw(out, depth + 1)?);
 							arg = String::new();
 							iseval = false;
@@ -121,12 +124,16 @@ impl Shell {
 		if args.len() == 0 {
 			out = String::new();
 		} else if args[0] == "shcall" {
-			let builtin = builtins::get(&args[1]);
-			if builtin.is_some() {
-				args.pop_front();
-				out = builtin.unwrap()(self, &args)?;
-			} else {
+			if args.len() == 1 {
 				out = String::new();
+			} else {
+				let builtin = builtins::get(&args[1]);
+				if builtin.is_some() {
+					args.pop_front();
+					out = builtin.unwrap()(self, &args)?;
+				} else {
+					out = String::new();
+				}
 			}
 		} else {
 			let var = vars::get(&args[0]);

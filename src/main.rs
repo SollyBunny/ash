@@ -8,6 +8,7 @@ use std::io::Error;
 fn run() -> Result<(), Error> {
 	let mut shell = shell::Shell::new()?;
 	let mut out: Result<String, Error>;
+	shell.eval("shcall setup")?;
 	static READLINE: &str = "$(shcall readline)";
 	while shell.is_run {
 		let readline_var = vars::get("readline");
