@@ -200,7 +200,7 @@ pub fn fn_echo (_shell: &mut Shell, args: &Args) -> Result<String, Error> {
 
 pub fn fn_setup(_shell: &mut Shell, _args: &Args) -> Result<String, Error> { unsafe {
 	for (key, _) in BUILTINS.as_ref().unwrap().iter() {
-		vars::set(key, format!("shcall {}", key));
+		vars::set(key, format!("shcall {} $*", key));
 	}
 	vars::del("readline");
 	// vars::set("readline", r"(echo >\ ;shcall readline)");

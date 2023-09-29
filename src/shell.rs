@@ -51,7 +51,7 @@ impl Shell {
 					't' => '\t',
 					'n' => '\n',
 					'r' => '\r',
-					'e' => '\x1b',
+					'e' => '\x1b', // Escape
 					'a' => '\x07', // Terminal Bell
 					'b' => '\x08', // Backspace
 					'v' => '\x0b', // Vertical Tab
@@ -64,6 +64,8 @@ impl Shell {
 					' ' => {
 						if arg.len() > 0 && brackets == 0 {
 							let out = arg.trim_matches('$').trim_matches('(').trim_matches(')');
+							let out = self.parse_args(out, depth + 1)?;
+							let out = self.eval_raw(out, depth + 1)?;
 							let out = self.parse_args(out, depth + 1)?;
 							let out = self.eval_raw(out, depth + 1)?;
 							args.push_back(out);
@@ -80,6 +82,11 @@ impl Shell {
 					')' => {
 						brackets -= 1;
 						arg.push(c);
+					}
+					';' | '\n' => {
+						iscontinue = true;
+						from = i;
+						break;
 					}
 					_ => {
 						arg.push(c);
@@ -114,7 +121,9 @@ impl Shell {
 		if arg.len() > 0 {
 			if iseval {
 				if brackets >= 0 {
-					let out: &str = arg.trim_matches('$').trim_matches('(').trim_matches(')');
+					let out = arg.trim_matches('$').trim_matches('(').trim_matches(')');
+					let out = self.parse_args(out, depth + 1)?;
+					let out = self.eval_raw(out, depth + 1)?;
 					let out = self.parse_args(out, depth + 1)?;
 					let out = self.eval_raw(out, depth + 1)?;
 					args.push_back(out);
@@ -154,6 +163,17 @@ impl Shell {
 		} else {
 			let var = vars::get(&args[0]);
 			if var.is_some() {
+				vars::set("#", args.len().to_string());
+				let mut combined_args = String::new();
+				for (i, arg) in args.iter().enumerate() {
+					vars::set(i.to_string(), arg);
+					if i != 0 {
+						combined_args.push_str(arg);
+					}
+					combined_args.push(';');
+				}
+				combined_args.pop();
+				vars::set("*", combined_args);
 				let args = self.parse_args(var.unwrap(), depth + 1)?;
 				out = self.eval_raw(args, depth + 1)?;
 			} else {
