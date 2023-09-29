@@ -1,7 +1,6 @@
 
 use std::collections::HashMap;
 use std::io::{stderr, Write, Error};
-use once_cell::sync::Lazy;
 
 use crossterm::{
     cursor,

@@ -7,6 +7,8 @@ pub type Args = VecDeque<String>;
 
 mod builtins;
 
+const RECURSE_LIMIT: usize = 100;
+
 pub struct Shell {
 	pub is_run: bool,
 	pub is_echo: bool,
@@ -28,10 +30,11 @@ impl Shell {
 		Ok(())
 	}
 	pub fn eval<T: AsRef<str>>(&mut self, input: T) -> Result<String, Error> {
-		self.eval_raw(input, 0)
+		let args = self.parse_args(input, 0)?;
+		self.eval_raw(args, 0)
 	}
-	pub fn eval_raw<T: AsRef<str>>(&mut self, input: T, depth: u32) -> Result<String, Error> {
-		if depth > 64 {
+	pub fn parse_args<T: AsRef<str>>(&mut self, input: T, depth: usize) -> Result<Args, Error> {
+		if depth > RECURSE_LIMIT {
 			return Err(Error::new(ErrorKind::Other, "Recursion limit exceeded"));
 		}
 		let mut args: Args = Args::new();
@@ -61,8 +64,9 @@ impl Shell {
 					' ' => {
 						if arg.len() > 0 && brackets == 0 {
 							let out = arg.trim_matches('$').trim_matches('(').trim_matches(')');
-							// let out = self.eval_raw(out, depth + 1)?;
-							args.push_back(self.eval_raw(out, depth + 1)?);
+							let out = self.parse_args(out, depth + 1)?;
+							let out = self.eval_raw(out, depth + 1)?;
+							args.push_back(out);
 							arg = String::new();
 							iseval = false;
 						} else {
@@ -110,13 +114,26 @@ impl Shell {
 		if arg.len() > 0 {
 			if iseval {
 				if brackets >= 0 {
-					let stripped: &str = arg.trim_matches('$').trim_matches('(').trim_matches(')');
-					let out = self.eval_raw(stripped, depth + 1)?;
-					args.push_back(self.eval_raw(out, depth + 1)?);
+					let out: &str = arg.trim_matches('$').trim_matches('(').trim_matches(')');
+					let out = self.parse_args(out, depth + 1)?;
+					let out = self.eval_raw(out, depth + 1)?;
+					args.push_back(out);
 				}
 			} else {
 				args.push_back(arg);
 			}
+		}
+		Ok(if iscontinue {
+			self.eval_raw(args, 0)?;
+			self.parse_args(&input.as_ref()[from + 1..], depth + 1)?
+		} else {
+			println!("{:?}", args);
+			args
+		})
+	}
+	pub fn eval_raw(&mut self, mut args: Args, depth: usize) -> Result<String, Error> {
+		if depth > RECURSE_LIMIT {
+			return Err(Error::new(ErrorKind::Other, "Recursion limit exceeded"));
 		}
 		// println!("{}: \"{}\" -> {:?}", depth + 1, input.as_ref(), args);
 		let mut out: String;
@@ -137,7 +154,8 @@ impl Shell {
 		} else {
 			let var = vars::get(&args[0]);
 			if var.is_some() {
-				out = var.unwrap();
+				let args = self.parse_args(var.unwrap(), depth + 1)?;
+				out = self.eval_raw(args, depth + 1)?;
 			} else {
 				out = String::new();
 				for arg in &args {
@@ -146,9 +164,6 @@ impl Shell {
 				}
 				out.pop();
 			}
-		}
-		if iscontinue {
-			out = self.eval_raw(&input.as_ref()[from + 1..], depth + 1)?;
 		}
 		Ok(out)
 	}
